@@ -1,24 +1,28 @@
+
 {
-    "listeners": [
-        {
-            "address": "0.0.0.0",
-            "port": 8000,
-            "https": false
-        }
-    ],
-    "app": {
-        "number_of_threads": 4,
-        "enable_session": false
-    },
-    "database": {
-        "host": "db",
-        "port": 5432,
-        "dbname": "iot_db",
-        "user": "iot",
-        "password": "iotpass",
-        "connections": 10
-    },
-    "log": {
-        "log_level": "INFO"
+  "listeners": [
+    {
+      "address": "0.0.0.0",
+      "port": 8000,
+      "https": false
     }
+  ],
+  "app": {
+    "number_of_threads": 4,
+    "enable_session": false
+  },
+  "db_clients": [
+    {
+      "rdbms": "postgresql",
+      "host": "127.0.0.1",
+      "port": 5433,
+      "dbname": "iot_db",
+      "user": "iot",
+      "passwd": "iotpass",
+      "number_of_connections": 10
+    }
+  ],
+  "log": {
+    "log_level": "INFO"
+  }
 }
