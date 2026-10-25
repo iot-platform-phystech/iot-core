@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: iot_db
+      POSTGRES_USER: iot
+      POSTGRES_PASSWORD: ${IOT_DB_PASSWORD:-iotpass}
+    volumes:
+      - iot-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U iot -d iot_db]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  core:
+    build: .
+    environment:
+      IOT_DATABASE_URL: "host=db port=5432 dbname=iot_db user=iot password=${IOT_DB_PASSWORD:-iotpass}"
+      IOT_CORE_HOST: 0.0.0.0
+      IOT_ADAPTER_URL: http://adapter:8080
+      IOT_TELEGRAM_BOT_TOKEN: ${IOT_TELEGRAM_BOT_TOKEN:-}
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+  adapter:
+    build: ../iot-http-adapter
+    environment:
+      IOT_CORE_URL: http://core:8000
+      IOT_ADAPTER_HOST: 0.0.0.0
+      IOT_SENSOR_URL: ${IOT_SENSOR_URL:-}
+      IOT_SENSOR_PATH: ${IOT_SENSOR_PATH:-/api/v1/commands}
+      IOT_SENSOR_ALGORITHM: ${IOT_SENSOR_ALGORITHM:-aes-256-gcm}
+      IOT_AES_KEY_BASE64: ${IOT_AES_KEY_BASE64:-}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - core
+volumes:
+  iot-data:

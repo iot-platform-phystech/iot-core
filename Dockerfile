@@ -28,9 +28,8 @@ RUN git clone https://github.com/drogonframework/drogon.git && \
 
 WORKDIR /app
 COPY . .
-RUN mkdir build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc)
+RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build build -j2
 
 FROM ubuntu:22.04
 
@@ -40,12 +39,14 @@ RUN apt-get update && apt-get install -y \
     zlib1g \
     libssl3 \
     libbrotli1 \
-    libpq5 \
+    libpq5 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /app/build/iot-core .
-COPY config.json .
+COPY --from=builder /usr/local/lib/ /usr/local/lib/
+RUN ldconfig
+ENV IOT_CORE_HOST=0.0.0.0
 
 EXPOSE 8000
 
