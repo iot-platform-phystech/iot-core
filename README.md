@@ -200,3 +200,9 @@ python3 tests/integration.py ../iot-http-adapter/build/debug/iot-http-adapter
 Проверяются CRUD, связи и дубликаты, валидация, команды, оба кодека, запись и
 сохранение истории, Telegram-уведомления, отключение уведомлений и ошибка Telegram.
 Временные контейнеры и сеть удаляются в `finally`.
+
+Заготовки coroutine-интерфейсов из параллельной ветки сохранены в
+`repositories/interfaces/`, вместе с `*DbRepository`, `UserService.h`,
+`DeviceService.h` и отдельными User/Device-контроллерами. Они пока содержат
+объявления без реализаций и не подключены к серверу; рабочие маршруты
+регистрирует `ApiController`.
