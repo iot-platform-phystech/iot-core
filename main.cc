@@ -1,21 +1,19 @@
 #include <drogon/drogon.h>
-#include "controllers/HealthController.h"
-#include "controllers/IngestController.h"
-
-using namespace drogon;
+#include "repositories/UserDbRepository.h"
+#include "services/UserService.h"
+#include "core/ServiceLocator.h"
 
 int main() {
-    app().loadConfigFile("./config.json");
-    
-    // Инициализация БД через Drogon ORM
-    auto dbConfig = app().getCustomConfig();
-    if (dbConfig.isMember("database")) {
-        auto db = dbConfig["database"];
-        LOG_INFO << "Connecting to database: " << db["host"].asString();
-    }
-    
-    LOG_INFO << "IoT Core starting on port 8000...";
-    app().run();
-    
-    return 0;
+    auto db = drogon::app().getDbClient("default");
+
+    auto userRepo    = std::make_shared<UserDbRepository>(db);
+    auto deviceRepo  = std::make_shared<DeviceDbRepository>(db);
+    auto userService = std::make_shared<UserService>(userRepo);
+    auto deviceService = std::make_shared<DeviceService>(deviceRepo, userService);
+
+    auto &loc = ServiceLocator::instance();
+    loc.setUserService(userService);
+    loc.setDeviceService(deviceService);
+
+    drogon::app().loadConfigFile("./config.json").run();
 }
