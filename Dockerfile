@@ -2,6 +2,19 @@ FROM ubuntu:22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates cmake g++ make\
+    libboost-system-dev \
+    nlohmann-json3-dev \ 
+    libcurl4-openssl-dev libssl-dev zlib1g-dev git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 https://github.com/reo7sp/tgbot-cpp.git /tmp/tgbot-cpp \
+ && cmake -S /tmp/tgbot-cpp -B /tmp/tgbot-cpp/build \
+ && cmake --build /tmp/tgbot-cpp/build -j2 \
+ && cmake --install /tmp/tgbot-cpp/build \
+ && rm -rf /tmp/tgbot-cpp
+ 
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -40,6 +53,7 @@ RUN apt-get update && apt-get install -y \
     libssl3 \
     libbrotli1 \
     libpq5 ca-certificates \
+    libcurl4 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

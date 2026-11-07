@@ -1,22 +1,35 @@
 #include "NotificationService.h"
-#include <trantor/utils/Logger.h>
-#include <stdexcept>
-namespace iot {
-NotificationService::NotificationService(std::string token, const std::string& origin) : token_(std::move(token)) {
-    if (!token_.empty()) {
-        if (token_.find_first_not_of("0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-") != std::string::npos)
-            throw std::invalid_argument("Invalid Telegram bot token format");
-        telegram_ = std::make_shared<HttpRepository>(origin);
+#include <iostream>
+
+NotificationService::NotificationService(std::vector<std::unique_ptr<INotifier>> notifiers)
+    : notifiers_(std::move(notifiers)) {
+    th_ = std::thread(&NotificationService::worker, this);
+}
+
+NotificationService::~NotificationService() {
+    { std::lock_guard<std::mutex> l(m_); stop_ = true; }
+    cv_.notify_all();
+    if (th_.joinable()) th_.join();
+}
+
+void NotificationService::notify(Notification n) {
+    { std::lock_guard<std::mutex> l(m_); q_.push(std::move(n)); }
+    cv_.notify_one();
+}
+
+void NotificationService::worker() {
+    for (;;) {
+        Notification n;
+        {
+            std::unique_lock<std::mutex> l(m_);
+            cv_.wait(l, [&] { return stop_ || !q_.empty(); });
+            if (stop_ && q_.empty()) return;
+            n = std::move(q_.front());
+            q_.pop();
+        }
+        for (auto& notifier : notifiers_) {      // ошибка одного канала не мешает другому
+            if (!notifier->send(n))
+                std::cerr << "[notify] " << notifier->name() << ": не отправлено\n";
+        }
     }
-}
-void NotificationService::measurement(const std::string& chatId, const Json::Value& data) const {
-    if (!telegram_ || chatId.empty()) return;
-    Json::Value message;
-    message["chat_id"] = chatId;
-    message["text"] = "Sensor " + data["sensor_id"].asString() + ": " + data["value"].asString() + " " + data["unit"].asString();
-    telegram_->post("/bot" + token_ + "/sendMessage", message, [](Result result) {
-        if (result.status != 200 || !result.body.isObject() || !result.body["ok"].isBool() || !result.body["ok"].asBool())
-            LOG_WARN << "Telegram notification failed (HTTP " << result.status << ")";
-    });
-}
 }

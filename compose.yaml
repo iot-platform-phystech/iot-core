@@ -13,6 +13,13 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "127.0.0.1:8025:8025"   # веб-интерфейс со всеми «отправленными» письмами
+      - "127.0.0.1:1025:1025"   # SMTP-порт для приема писем
+
   core:
     build: .
     environment:
@@ -20,23 +27,33 @@ services:
       IOT_CORE_HOST: 0.0.0.0
       IOT_ADAPTER_URL: http://adapter:8080
       IOT_TELEGRAM_BOT_TOKEN: ${IOT_TELEGRAM_BOT_TOKEN:-}
+      # ДОБАВЛЕНЫ ПЕРЕМЕННЫЕ ДЛЯ ПОЧТЫ:
+      IOT_SMTP_URL: smtp://mailpit:1025
+      IOT_SMTP_USER: ""
+      IOT_SMTP_PASSWORD: ""
+      IOT_SMTP_FROM: iot@example.com
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
-  adapter:
-    build: ../iot-http-adapter
-    environment:
-      IOT_CORE_URL: http://core:8000
-      IOT_ADAPTER_HOST: 0.0.0.0
-      IOT_SENSOR_URL: ${IOT_SENSOR_URL:-}
-      IOT_SENSOR_PATH: ${IOT_SENSOR_PATH:-/api/v1/commands}
-      IOT_SENSOR_ALGORITHM: ${IOT_SENSOR_ALGORITHM:-aes-256-gcm}
-      IOT_AES_KEY_BASE64: ${IOT_AES_KEY_BASE64:-}
-    ports:
-      - "127.0.0.1:8080:8080"
-    depends_on:
-      - core
+      mailpit:
+        condition: service_started
+
+  # ВРЕМЕННО ЗАКОММЕНТИРОВАНО, ЧТОБЫ НЕ МЕШАЛО СБОРКЕ:
+  # adapter:
+  #   build: ../iot-http-adapter
+  #   environment:
+  #     IOT_CORE_URL: http://core:8000
+  #     IOT_ADAPTER_HOST: 0.0.0.0
+  #     IOT_SENSOR_URL: ${IOT_SENSOR_URL:-}
+  #     IOT_SENSOR_PATH: ${IOT_SENSOR_PATH:-/api/v1/commands}
+  #     IOT_SENSOR_ALGORITHM: ${IOT_SENSOR_ALGORITHM:-aes-256-gcm}
+  #     IOT_AES_KEY_BASE64: ${IOT_AES_KEY_BASE64:-}
+  #   ports:
+  #     - "127.0.0.1:8080:8080"
+  #   depends_on:
+  #     - core
+
 volumes:
   iot-data:

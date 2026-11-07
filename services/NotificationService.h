@@ -1,12 +1,23 @@
 #pragma once
-#include "repositories/HttpRepository.h"
-namespace iot {
+#include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <vector>
+#include "../notifications/INotifier.h"
+
 class NotificationService {
 public:
-    NotificationService(std::string token, const std::string& origin);
-    void measurement(const std::string& chatId, const Json::Value& data) const;
+    explicit NotificationService(std::vector<std::unique_ptr<INotifier>> notifiers);
+    ~NotificationService();
+    void notify(Notification n);        // не блокирует HTTP-запрос
 private:
-    std::string token_;
-    std::shared_ptr<HttpRepository> telegram_;
+    void worker();
+    std::vector<std::unique_ptr<INotifier>> notifiers_;
+    std::queue<Notification> q_;
+    std::mutex m_;
+    std::condition_variable cv_;
+    bool stop_ = false;
+    std::thread th_;
 };
-}
